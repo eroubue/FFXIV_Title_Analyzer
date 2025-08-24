@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html>
+<!-- 图片生成流程： -->
+<!-- 1. 从网页中获取用户输入的文字，分为标题和副标题 -->
+<!-- 2. 获取用户上传的一张图片 -->
+<!-- 3. 实时将文字和图片合成一张图片展示在预览框中，格式在子程序注释里描述 -->
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FF14副本标题画面生成器</title>
+    <!-- 导入bootstrap5 和 vue3 - 本地版 -->
+    <link rel="stylesheet" href="./lib/bootstrap.min.css">
+    <script src="./lib/vue.global.prod.js"></script>
+    <script src="./lib/bootstrap.bundle.min.js"></script>
+    <!-- 导入csi.js -->
+    <script src="./csi.min.js"></script>
+
+    <!-- 导入dom-to-image - 本地版 -->
+    <script src="./lib/dom-to-image.min.js"></script>
+    <!-- 导入file-saver - 本地版 -->
+    <script src="./lib/FileSaver.min.js"></script>
+
+    <style>
+        .container {
+            margin-top: 20px;
+        }
+    </style>
+    <!-- 网页底色#bbe6ff -->
+    <style>
+        body {
+            background-color: #bbe6ff;
+        }
+
+        .alert {
+            background-color: #b4ffd9;
+        }
+
+        hr {
+            border: 1px solid #ff5cad;
+        }
+
+        nav {
+            border-bottom: 1px solid #ff5cad;
+        }
+    </style>
+    <style>
+        .FFText {
+            position: absolute;
+            transform: translate(0%, -50%);
+            height: 1.2em;
+            font-family: "Source Han Sans SC Medium", "SimHei";
+            color: rgba(0, 0, 0, 0.0);
+            filter: brightness(1.5) hue-rotate(10deg);
+            text-shadow:
+                0.01880193147997658em 0.046830640511512575em 0.03397934292313261em rgba(62, 29, 11, 0.8063141004774957),
+                -0.006867003426216269em 0.0019118977374021676em 0.022761309805534716em rgba(216, 201, 153, 0.995),
+                -0.046814297625018875em 0.024864957371386675em 0.10372867171800877em rgba(60, 69, 35, 0.447933792960114),
+                0.03266432065753052em -0.010392492006210027em 0.13018820859331579em rgba(50, 14, 29, 0.2777488886713292),
+                -0.011522533305076254em -0.019124892715467207em 0.005847223166726737em rgba(48, 11, 36, 0.4451854174605969),
+                -0.0247255814451618em -0.0007330587859434678em 0.013595785033025507em rgba(77, 51, 46, 0.45248767102280335),
+                -0.010905346208824109em -0.05300760801260202em 0.13427897218835377em rgba(68, 48, 51, 0.012325357932477701),
+                -0.025077035773572218em 0.008303554777095474em 0.0023006488437780134em rgba(74, 9, 32, 0.17572186377942875),
+                -0.034091947312951384em 0.042583725527024475em 0.0821051264697332em rgba(76, 54, 45, 0.1933956664027747),
+                -0.06017908191805735em -0.04776935704327773em 0.042763326142824146em rgba(81, 79, 42, 0.4028683894439872),
+                0.04262212308417785em -0.0190778325647236em 0.0685582784711997em rgba(80, 55, 35, 0.5307255452872778),
+                0.03134337272230689em 0.001299007455634928em 0.08278771928712558em rgba(57, 53, 30, 0.5191396138592352),
+                -0.026048619271614178em 0.006807347281937284em 0.13697988491409385em rgba(124, 62, 45, 0.43981092002120836),
+                -0.01660425840285385em 0.02087104394825742em 0.060610431011454746em rgba(71, 11, 49, 0.6833849366120458),
+                -0.05757157561072905em -0.01484362370946038em 0.0402937828465436em rgba(70, 15, 9, 0.2738286130084643),
+                -0.027545914909949804em 0.009773314602713313em 0.01290485296090562em rgba(41, 80, 59, 0.6375417768807231),
+                -0.006040636064217514em -0.0794865956096668em 0.1066408867684885em rgba(65, 88, 47, 0.26617985332693006),
+                0.023231581775017898em 0.01815298201472247em 0.020024362033301768em rgba(63, 28, 38, 0),
+                -0.028331148122989386em 0.02207770654587484em 0.040970877432529945em rgba(70, 35, 30, 0.08527823642636989),
+                -0.03668400574643267em 0.014814928889954716em 0.11599084074049382em rgba(72, 9, 19, 0.0409946045194553),
+                -0.013764248715536859em -0.018989049178363623em 0.0em rgba(66, 52, 32, 0.4907714593252965),
+                0.06565391408026605em -0.007405931802647878em 0.09710613499827946em rgba(44, 74, 7, 0.3115405601463968),
+                0.0594324265105658em -0.056325993734641304em 0.11024183406733785em rgba(95, 64, 73, 0.3413356855192694),
+                0.023403805955938883em 0.02408095605867584em 0.015279855244618178em rgba(43, 60, 41, 0.390261582413414),
+                0.03761518367329506em -0.009688308693211918em 0.09735298820105016em rgba(55, 13, 32, 0.02225273420109998),
+                -0.07532214406826256em -0.0489114042866353em 0.06781704564372576em rgba(77, 14, 34, 0.2382509258094203),
+                0.02797278378632407em 0.008806852931759387em 0.10062346166181542em rgba(122, 5, 32, 0.38581970780864283),
+                0.020617276244071683em 0.012921413333554474em 0.01939424340014785em rgba(91, 21, 41, 0.15449979384031218),
+                0.02268352920712873em 0.02486204646736957em 0.08809181070522887em rgba(72, 56, 50, 0.6706331768463276),
+                0.03322673452243678em 0.02007443899313427em 0.0035425637434837605em rgba(70, 68, 8, 0.4444116674948898),
+                0em 0em 0.4em #333,
+                0em 0em 0.2em #333,
+                0em 0em 0.2em #333;
+        }
+
+        .title-preview {
+            letter-spacing: -0.09em;
+        }
+
+        .title-split-preview {
+            /* 位置由Vue.js动态控制 */
+        }
+
+        .title2-preview {
+            letter-spacing: 0.5em;
+            margin-right: 0.5em;
+        }
+        
+        /* 自定义滑动条样式 */
+        .form-range::-webkit-slider-thumb {
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .form-range::-moz-range-thumb {
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .form-range::-ms-thumb {
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        /* 不同颜色的标签 */
+        .badge.bg-success {
+            background-color: #28a745 !important;
+        }
+        
+        .badge.bg-info {
+            background-color: #17a2b8 !important;
+        }
+        
+        .badge.bg-warning {
+            background-color: #ffc107 !important;
+            color: #000 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 放置一个导航栏，上面有主页的按钮和图标，可以点击跳转到主页 -->
+    <div data-include="./nav.html"></div>
+    <div id="app" class="container">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <div>
+                        <h4 class="alert-heading">FF14副本标题画面生成器本地版</h4>
+                        <div class="float-end">
+                            <!-- 作者 -->
+                            <span class="badge bg-primary">作者：@电子旅人&Nagomi</span>
+                            <!-- 版本 -->
+                            <span class="badge bg-secondary">v1.0</span>
+                        </div>
+                    </div>
+                    <br /><br />
+                    <p>本工具可以生成FF14副本标题画面，支持自定义文字。</p>
+                    <p>使用方法：在下方输入框中输入标题和副标题，然后点击“生成”按钮即可生成结果。如果不提供背景图片，将会使用绿色背景。</p>
+                    <p style="color:red;">
+                        当前完成度有限，仅有八成相似，后面闲了再来改改。
+                    </p>
+                    <hr>
+                    <!-- 更新日志 -->
+                    <strong>更新日志</strong>
+                    <ul>
+                        <li>2025-08-24 v1.0：<br />本地版，支持自定义字体、字间距<br />加入了`在新标签页打开`的保存方式以兼容一些环境</li>
+                        <li>2023-04-01 v0.9：<br />微调了下颜色(小声：虽然还是差点意思)<br />加入了自定义字体、字间距<br />加入了`在新标签页打开`的保存方式以兼容一些环境</li>
+                        <li>2023-03-27 v0.8：初版</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info" role="alert">
+                    <strong>副本标题画面生成器</strong>
+                    <br /><br />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">标题</label>
+                                <input type="text" class="form-control" id="title" v-model="title" placeholder="请输入标题">
+                            </div>
+                            <div class="mb-3">
+                                <label for="title2" class="form-label">副标题</label>
+                                <input type="text" class="form-control" id="title2" v-model="title2"
+                                    placeholder="请输入副标题">
+                            </div>
+                            <!-- 分割线长度 滑动块 绑定到 title_split_count -->
+                            <div class="mb-3">
+                                <label for="title2" class="form-label">分割线长度</label>
+                                <input type="range" class="form-range" min="1" max="64" step="1" id="title_split_count"
+                                    v-model="title_split_count" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="title2" class="form-label">背景图片</label>
+                                <input type="file" class="form-control" id="bg" @change="changeBg" accept="image/*" />
+                            </div>
+
+                        </div>
+                        <div class="col-md-6">
+                            <!-- 放一个字体配置功能，可以输入字体名称，会应用到所有挂FFText的元素上。 -->
+                            <div class="mb-3">
+                                <label for="font" class="form-label">字体</label>
+                                <!-- 加一行小灰字说默认字体 -->
+                                <small id="fontHelp" class="form-text text-muted">* 不填为思源黑体(如有)或者系统黑体</small>
+                                <input type="text" class="form-control" id="font" v-model="font"
+                                    placeholder="请输入字体名称，如`宋体`或`SimSun`">
+                            </div>
+                            <br />
+                            <!-- 字间距设置 -->
+                            <div class="mb-3">
+                                <label for="title2" class="form-label">字间距 <span
+                                        class="badge bg-primary">当前值：{{letter_spacing}}个字</span>
+                                </label>
+                                <input type="range" class="form-range" min="-1" max="1" step="0.01" id="letter_spacing"
+                                    v-model="letter_spacing" />
+                            </div>
+                            
+                            <!-- 标题文字大小设置 -->
+                            <div class="mb-3">
+                                <label for="title_size" class="form-label">标题文字大小 <span
+                                        class="badge bg-success">当前值：{{title_size}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="50" max="200" step="5" id="title_size"
+                                    v-model="title_size" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            
+                            <!-- 分割线文字大小设置 -->
+                            <div class="mb-3">
+                                <label for="split_size" class="form-label">分割线文字大小 <span
+                                        class="badge bg-warning">当前值：{{split_size}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="30" max="150" step="1" id="split_size"
+                                    v-model="split_size" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            
+                            <!-- 副标题文字大小设置 -->
+                            <div class="mb-3">
+                                <label for="subtitle_size" class="form-label">副标题文字大小 <span
+                                        class="badge bg-info">当前值：{{subtitle_size}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="30" max="500" step="1" id="subtitle_size"
+                                    v-model="subtitle_size" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            
+                            <!-- 标题位置调节 -->
+                            <div class="mb-3">
+                                <label for="title_position" class="form-label">标题位置 <span
+                                        class="badge bg-success">当前值：{{title_position}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="40" max="60" step="1" id="title_position"
+                                    v-model="title_position" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            
+                            <!-- 分割线位置调节 -->
+                            <div class="mb-3">
+                                <label for="split_position" class="form-label">分割线位置 <span
+                                        class="badge bg-warning">当前值：{{split_position}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="35" max="55" step="1" id="split_position"
+                                    v-model="split_position" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            
+                            <!-- 副标题位置调节 -->
+                            <div class="mb-3">
+                                <label for="subtitle_position" class="form-label">副标题位置 <span
+                                        class="badge bg-info">当前值：{{subtitle_position}}%</span>
+                                </label>
+                                <input type="range" class="form-range" min="30" max="50" step="1" id="subtitle_position"
+                                    v-model="subtitle_position" />
+                                <small class="form-text text-muted">* 相对于预览区域高度的百分比</small>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <!-- 点击生成按钮会弹出一个模态框，模态框中会展示生成的图片，点击保存图片按钮可以保存图片到本地。 -->
+                                <button class="btn btn-primary" type="button" @click="generateImage">生成</button>
+                            </div>
+
+                            <br />
+                        </div>
+                    </div>
+                    <!-- 布置一块画布，用以制作和展示图片 -->
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="alert alert-secondary" role="alert">
+                                <strong>预览（与结果稍有误差是正常现象）</strong>
+                                <br /><br />
+
+                                <!-- 放置一个16:9的div，用于展示预览 底色天蓝色 -->
+                                <div class="ratio ratio-16x9 bg-primary" id="preview">
+                                    <!-- 放置一个img，用于展示图片，宽高占满底版 -->
+                                    <img id="img" class="img-fluid" style="width: 100%; height: 100%;" />
+                                    <h1 class="text-center FFText title-preview"
+                                        :style="{ 
+                                            fontSize: (0.1 * previewHeight * title_size / 100) + 'px',
+                                            top: (title_position) + '%'
+                                        }">
+                                        {{title}}
+                                    </h1>
+                                    <h2 class="text-center FFText title-split-preview"
+                                        :style="{ 
+                                            fontSize: (0.037 * previewHeight * split_size / 100) + 'px',
+                                            top: (split_position) + '%'
+                                        }">
+                                        {{title_split}}
+                                    </h2>
+                                    <h2 class="text-center FFText title2-preview"
+                                        :style="{ 
+                                            fontSize: (0.037 * previewHeight * subtitle_size / 100) + 'px',
+                                            top: (subtitle_position) + '%'
+                                        }">
+                                        &hairsp;{{title2}}
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 结果窗口 -->
+                <div class="col-12">
+                    <div class="modal fade" id="saveModal" tabindex="-1" aria-labelledby="saveModallLabel"
+                        aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h1 class="modal-title fs-5" id="saveModalLabel">生成结果</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <!-- 展示img_result里的图片 -->
+                                    <img id="gen_result" src="" alt="结果" class="img-fluid rounded-start" />
+                                    <small class="text-muted">部分设备无法直接下载，请尝试长按图片保存<br />或选择新标签页打开后再保存</small>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" @click="saveImage">
+                                        下载图片
+                                    </button>
+                                    <!-- 新标签页打开 -->
+                                    <a id="gen_result_link" target="_blank" class="btn btn-primary" role="button"
+                                        aria-pressed="true" @click="newTabOpen">
+                                        新标签页打开
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="result_wrapper" style="left: -10000px; position: absolute; top: -10000px;">
+                        <!-- 结果区，一个1920*1080的div用来真正渲染图片 -->
+                        <div id="result" class="ratio ratio-16x9"
+                            style="width: 1920px; height: 1080px; background-color: #000000;">
+                            <img id="img-result" class="img-fluid" style="width: 100%; height: 100%;" />
+                            <h1 class="text-center FFText title-preview" :style="{ 
+                                fontSize: (108 * title_size / 100) + 'px',
+                                top: (title_position) + '%'
+                            }">
+                                {{title}}
+                            </h1>
+                            <h2 class="text-center FFText title-split-preview" :style="{ 
+                                fontSize: (40 * split_size / 100) + 'px',
+                                top: (split_position) + '%'
+                            }">
+                                {{title_split}}
+                            </h2>
+                            <h2 class="text-center FFText title2-preview" :style="{ 
+                                fontSize: (40 * subtitle_size / 100) + 'px',
+                                top: (subtitle_position) + '%'
+                            }">
+                                &hairsp;{{title2}}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 构建vue实例
+        var data = {
+            title: "天然要害沙斯塔夏溶洞",
+            title2: "次元缝隙",
+            title_split: "⎯⎯⎯⎯⎯⎯⎯⎯⎯",
+            title_split_count: 9,
+            previewHeight: 0,
+            pic: null,
+            font: "",
+            letter_spacing: -0.09,
+            title_size: 100,      // 标题文字大小百分比
+            split_size: 100,      // 分割线文字大小百分比
+            subtitle_size: 100,   // 副标题文字大小百分比
+            title_position: 50,   // 标题位置百分比
+            split_position: 43,   // 分割线位置百分比
+            subtitle_position: 41, // 副标题位置百分比
+        };
+        var app = Vue.createApp({
+            data() {
+                return data;
+            },
+            methods: {
+                // 生成图片
+
+            },
+            mounted() {
+                // 页面加载完毕后，生成一张图片
+                this.previewHeight = document.getElementById("preview").clientHeight;
+
+            },
+            // 在数据变化时，重新生成图片
+            watch: {
+                title() {
+
+                },
+                title2() {
+
+                },
+                previewHeight() {
+
+                },
+                title_split_count() {
+                    console.log(this.title_split_count);
+                    this.title_split = '⎯'.repeat(this.title_split_count);
+                },
+                font() {
+                    console.log(this.font);
+                    // 应用到所有FFText
+                    var FFTexts = document.getElementsByClassName("FFText");
+                    for (var i = 0; i < FFTexts.length; i++) {
+                        // 如果this.font为空，就不设置字体
+                        if (this.font == "") {
+                            FFTexts[i].style.fontFamily = '"Source Han Sans SC Medium","SimHei"';
+                            continue;
+                        }
+                        FFTexts[i].style.fontFamily = this.font + ',"Source Han Sans SC Medium","SimHei"';
+                    }
+                },
+                letter_spacing() {
+                    console.log(this.letter_spacing);
+                    // 应用到大标题
+                    var title = document.getElementsByClassName("title-preview");
+                    for (var i = 0; i < title.length; i++) {
+                        title[i].style.letterSpacing = this.letter_spacing + 'em';
+                    }
+                },
+            },
+            created() {
+                // 页面加载完毕后，获取预览区域的高度
+                window.addEventListener("resize", this.handleResize);
+            },
+            destroyed() {
+                window.removeEventListener("resize", this.handleResize);
+            },
+            methods: {
+                handleResize() {
+                    this.previewHeight = document.getElementById("preview").clientHeight;
+                },
+                changeBg(e) {
+                    var file = e.target.files[0];
+                    var reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = function (e) {
+                        var img = document.getElementById("img");
+                        img.src = e.target.result;
+                        img.style.display = "block";
+                        var result = document.getElementById("img-result");
+                        result.src = e.target.result;
+                        result.style.display = "block";
+
+                    }
+
+                },
+                saveImage() {
+                    // 保存图片 data.pic 是一个blob对象 使用FileSaver.js保存
+                    window.saveAs(data.pic, "result.png");
+
+
+                }, generateImage() {
+                    // 判断img-result是否有图片
+                    if (document.getElementById("img-result").src == "") {
+                        console.log("没有图片");
+                        // 构建一个rgb为00ff00的图片放进去
+                        var canvas = document.createElement("canvas");
+                        canvas.width = 1920;
+                        canvas.height = 1080;
+                        var ctx = canvas.getContext("2d");
+                        ctx.fillStyle = "#00ff00";
+                        ctx.fillRect(0, 0, 1920, 1080);
+                        document.getElementById("img-result").src = canvas.toDataURL();
+                    }
+                    domtoimage.toBlob(document.getElementById('result'), { cacheBust: true, height: 1080, width: 1920 })
+                        .then(function (blob) {
+                            //放到gen_result里
+                            var img = document.getElementById("gen_result");
+                            data.pic = blob;
+                            img.src = URL.createObjectURL(blob);
+                            // 显示modal
+                            var myModal = new bootstrap.Modal(document.getElementById('saveModal'), {
+                                keyboard: false
+                            })
+                            myModal.show();
+
+                        }).catch(function (error) {
+                            console.error('oops, something went wrong!', error);
+                        });
+                },
+                newTabOpen() {
+                    // 新标签页打开data.pic
+                    window.open(URL.createObjectURL(data.pic));
+                    
+                },
+
+
+            },
+        });
+        // 挂载vue实例
+        app.mount("#app");
+
+
+
+    </script>
+</body>
+
+</html>
